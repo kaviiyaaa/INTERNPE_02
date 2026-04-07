@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rock Paper Scissors</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0f; --surface: #13131a; --border: #2a2a3a;
+      --accent: #7c6dfa; --accent2: #fa6d9a;
+      --text: #f0f0fa; --muted: #6b6b8a;
+      --win: #6dfa9a; --lose: #fa6d9a; --draw: #6dcffa;
+    }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh; display: flex;
+      align-items: center; justify-content: center; padding: 2rem;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(124,109,250,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,109,250,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridMove 20s linear infinite; pointer-events: none;
+    }
+    @keyframes gridMove { 0%{transform:translateY(0)} 100%{transform:translateY(48px)} }
+    .glow-orb { position: fixed; width: 500px; height: 500px; border-radius: 50%; filter: blur(120px); pointer-events: none; opacity: 0.15; }
+    .glow-orb.one { background: var(--accent); top: -100px; left: -100px; }
+    .glow-orb.two { background: var(--accent2); bottom: -100px; right: -100px; }
+    .card {
+      position: relative; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 24px;
+      padding: 2.5rem; width: 100%; max-width: 520px; z-index: 1;
+      animation: fadeUp 0.6s ease both;
+    }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--accent); background: rgba(124,109,250,0.1);
+      border: 1px solid rgba(124,109,250,0.25); border-radius: 99px;
+      padding: 4px 12px; margin-bottom: 0.5rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent); animation: pulse 2s ease infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+    .cpp-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: #6dfa9a; background: rgba(109,250,154,0.08);
+      border: 1px solid rgba(109,250,154,0.2); border-radius: 99px;
+      padding: 4px 12px; margin-bottom: 1.25rem; margin-left: 8px;
+    }
+    h1 { font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: 0.4rem; }
+    h1 span { color: var(--accent); }
+    .subtitle { font-size: 14px; color: var(--muted); margin-bottom: 2rem; font-family: 'DM Mono', monospace; }
+
+    /* scoreboard */
+    .scoreboard {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      align-items: center; gap: 12px;
+      background: #1a1a28; border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.25rem; margin-bottom: 1.75rem;
+    }
+    .score-side { text-align: center; }
+    .score-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .score-num { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+    .score-num.player { color: var(--accent); }
+    .score-num.computer { color: var(--accent2); }
+    .score-vs { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); }
+    .score-rounds { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* battle area */
+    .battle {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 1.75rem;
+    }
+    .fighter {
+      flex: 1; background: #1a1a28; border: 1px solid var(--border);
+      border-radius: 16px; padding: 1.25rem; text-align: center;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .fighter.win  { border-color: var(--win);  box-shadow: 0 0 20px rgba(109,250,154,0.15); }
+    .fighter.lose { border-color: var(--lose); box-shadow: 0 0 20px rgba(250,109,154,0.15); }
+    .fighter.draw { border-color: var(--draw); box-shadow: 0 0 20px rgba(109,207,250,0.15); }
+    .fighter-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .fighter-emoji { font-size: 3rem; line-height: 1; margin-bottom: 8px; display: block; transition: transform 0.3s; }
+    .fighter.win .fighter-emoji  { transform: scale(1.15); }
+    .fighter.lose .fighter-emoji { transform: scale(0.9); opacity: 0.7; }
+    .fighter-name { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); }
+    .vs-divider { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 700; color: var(--muted); }
+
+    /* result banner */
+    .result-banner {
+      text-align: center; padding: 12px 16px;
+      border-radius: 12px; font-size: 15px; font-weight: 700;
+      margin-bottom: 1.75rem; display: none;
+      animation: slideIn 0.3s ease both;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+    .result-banner.win  { background: rgba(109,250,154,0.1); border: 1px solid rgba(109,250,154,0.3); color: var(--win); }
+    .result-banner.lose { background: rgba(250,109,154,0.1); border: 1px solid rgba(250,109,154,0.3); color: var(--lose); }
+    .result-banner.draw { background: rgba(109,207,250,0.1); border: 1px solid rgba(109,207,250,0.3); color: var(--draw); }
+
+    /* choice buttons */
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+    .choice-btn {
+      background: #1a1a28; border: 1px solid var(--border);
+      border-radius: 16px; padding: 1rem 0.5rem;
+      cursor: pointer; text-align: center;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
+      font-family: 'Syne', sans-serif;
+    }
+    .choice-btn:hover:not(:disabled) {
+      border-color: var(--accent); background: rgba(124,109,250,0.08);
+      box-shadow: 0 0 16px rgba(124,109,250,0.2); transform: translateY(-2px);
+    }
+    .choice-btn:active:not(:disabled) { transform: scale(0.96); }
+    .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .choice-btn.selected { border-color: var(--accent); background: rgba(124,109,250,0.12); }
+    .choice-emoji { font-size: 2rem; display: block; margin-bottom: 6px; }
+    .choice-label { font-size: 13px; font-weight: 700; color: var(--text); }
+
+    /* reset button */
+    button.restart-btn {
+      width: 100%; background: transparent; color: var(--text);
+      border: 1px solid var(--border); border-radius: 12px;
+      font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+      padding: 14px; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.1s;
+    }
+    button.restart-btn:hover { border-color: var(--accent); background: rgba(124,109,250,0.08); }
+    button.restart-btn:active { transform: scale(0.98); }
+
+    .loading { text-align: center; padding: 2rem; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); }
+
+    @keyframes shake {
+      0%,100%{transform:translateX(0)}
+      20%{transform:translateX(-6px)}
+      40%{transform:translateX(6px)}
+      60%{transform:translateX(-4px)}
+      80%{transform:translateX(4px)}
+    }
+    .shake { animation: shake 0.4s ease; }
+  </style>
+</head>
+<body>
+  <div class="glow-orb one"></div>
+  <div class="glow-orb two"></div>
+
+  <div class="card">
+    <div id="loading" class="loading">Loading C++ engine...</div>
+    <div id="game-content" style="display:none;">
+      <div>
+        <div class="badge">rps game</div>
+      </div>
+      <h1>Rock Paper <span>Scissors</span></h1>
+      <p class="subtitle">choose your weapon — C++ picks for the computer</p>
+
+      <!-- scoreboard -->
+      <div class="scoreboard">
+        <div class="score-side">
+          <div class="score-label">You</div>
+          <div class="score-num player" id="player-score">0</div>
+        </div>
+        <div style="text-align:center;">
+          <div class="score-vs">VS</div>
+          <div class="score-rounds" id="rounds-label">0 rounds</div>
+        </div>
+        <div class="score-side">
+          <div class="score-label">Computer</div>
+          <div class="score-num computer" id="computer-score">0</div>
+        </div>
+      </div>
+
+      <!-- battle display -->
+      <div class="battle">
+        <div class="fighter" id="player-fighter">
+          <div class="fighter-label">You</div>
+          <span class="fighter-emoji" id="player-display">❓</span>
+          <div class="fighter-name" id="player-name">—</div>
+        </div>
+        <div class="vs-divider">VS</div>
+        <div class="fighter" id="computer-fighter">
+          <div class="fighter-label">Computer</div>
+          <span class="fighter-emoji" id="computer-display">❓</span>
+          <div class="fighter-name" id="computer-name">—</div>
+        </div>
+      </div>
+
+      <!-- result -->
+      <div class="result-banner" id="result-banner"></div>
+
+      <!-- choice buttons -->
+      <div class="choices">
+        <button class="choice-btn" id="btn-0" onclick="play(0)">
+          <span class="choice-emoji">🪨</span>
+          <span class="choice-label">Rock</span>
+        </button>
+        <button class="choice-btn" id="btn-1" onclick="play(1)">
+          <span class="choice-emoji">📄</span>
+          <span class="choice-label">Paper</span>
+        </button>
+        <button class="choice-btn" id="btn-2" onclick="play(2)">
+          <span class="choice-emoji">✂️</span>
+          <span class="choice-label">Scissors</span>
+        </button>
+      </div>
+
+      <button class="restart-btn" onclick="resetGame()">↺ Reset Score</button>
+    </div>
+  </div>
+
+  <script src="rps.js"></script>
+  <script>
+    const emojis = ['🪨', '📄', '✂️'];
+    const names  = ['Rock', 'Paper', 'Scissors'];
+
+    Module.onRuntimeInitialized = function() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('game-content').style.display = 'block';
+      resetGame();
+    };
+
+    function resetGame() {
+      Module.ccall('init_game', null, [], []);
+      document.getElementById('player-score').textContent   = '0';
+      document.getElementById('computer-score').textContent = '0';
+      document.getElementById('rounds-label').textContent   = '0 rounds';
+      document.getElementById('player-display').textContent  = '❓';
+      document.getElementById('computer-display').textContent = '❓';
+      document.getElementById('player-name').textContent  = '—';
+      document.getElementById('computer-name').textContent = '—';
+      document.getElementById('result-banner').style.display = 'none';
+      document.getElementById('player-fighter').className   = 'fighter';
+      document.getElementById('computer-fighter').className = 'fighter';
+      enableButtons(true);
+    }
+
+    function enableButtons(on) {
+      [0,1,2].forEach(i => {
+        document.getElementById('btn-'+i).disabled = !on;
+        document.getElementById('btn-'+i).classList.remove('selected');
+      });
+    }
+
+    function play(playerChoice) {
+      enableButtons(false);
+      document.getElementById('btn-'+playerChoice).classList.add('selected');
+
+      // suspense — show question marks briefly
+      document.getElementById('player-display').textContent  = '❓';
+      document.getElementById('computer-display').textContent = '❓';
+      document.getElementById('result-banner').style.display = 'none';
+      document.getElementById('player-fighter').className   = 'fighter';
+      document.getElementById('computer-fighter').className = 'fighter';
+
+      setTimeout(() => {
+        // call C++ for computer choice and result
+        const computerChoice = Module.ccall('get_computer_choice', 'number', [], []);
+        const result = Module.ccall('play_round', 'number', ['number','number'], [playerChoice, computerChoice]);
+        const pScore = Module.ccall('get_player_score',   'number', [], []);
+        const cScore = Module.ccall('get_computer_score', 'number', [], []);
+        const rounds = Module.ccall('get_rounds', 'number', [], []);
+
+        // reveal choices
+        document.getElementById('player-display').textContent   = emojis[playerChoice];
+        document.getElementById('computer-display').textContent = emojis[computerChoice];
+        document.getElementById('player-name').textContent   = names[playerChoice];
+        document.getElementById('computer-name').textContent = names[computerChoice];
+
+        // update scores
+        document.getElementById('player-score').textContent   = pScore;
+        document.getElementById('computer-score').textContent = cScore;
+        document.getElementById('rounds-label').textContent   = rounds + ' round' + (rounds > 1 ? 's' : '');
+
+        // show result
+        const banner = document.getElementById('result-banner');
+        banner.style.display = 'block';
+        banner.style.animation = 'none';
+        banner.offsetHeight;
+        banner.style.animation = '';
+
+        if (result === 1) {
+          banner.className = 'result-banner win';
+          banner.textContent = 'You win this round!';
+          document.getElementById('player-fighter').className   = 'fighter win';
+          document.getElementById('computer-fighter').className = 'fighter lose';
+        } else if (result === 2) {
+          banner.className = 'result-banner lose';
+          banner.textContent = 'Computer wins this round!';
+          document.getElementById('player-fighter').className   = 'fighter lose';
+          document.getElementById('computer-fighter').className = 'fighter win';
+          document.getElementById('player-fighter').classList.add('shake');
+          setTimeout(() => document.getElementById('player-fighter').classList.remove('shake'), 400);
+        } else {
+          banner.className = 'result-banner draw';
+          banner.textContent = "It's a draw!";
+          document.getElementById('player-fighter').className   = 'fighter draw';
+          document.getElementById('computer-fighter').className = 'fighter draw';
+        }
+
+        enableButtons(true);
+        document.getElementById('btn-'+playerChoice).classList.remove('selected');
+      }, 600);
+    }
+  </script>
+</body>
+</html>
